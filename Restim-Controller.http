@@ -1,0 +1,6 @@
+@VolumeControl_HostAddress = http://localhost:5000
+
+GET {{VolumeControl_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

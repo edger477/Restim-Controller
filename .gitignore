@@ -1,0 +1,9 @@
+# Ignore 'bin' folder
+bin/
+
+# Ignore 'obj' folder
+obj/
+
+# Ignore all files with the '.private' extension
+*.private.*
+

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volume Control App</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.2.0/dist/vue.global.js"></script>
+</head>
+
+<body data-bs-theme="dark">
+  <div id="app" class="container my-5">
+    <div v-if="!isLoggedIn">
+      <!-- Welcome Page -->
+      <h1>Welcome to Restim control panel!</h1>
+      <div class="mb-3">
+        <label for="authKey" class="form-label">Enter your Key</label>
+        <input type="text" v-model="authKey" class="form-control" id="authKey" placeholder="Auth Key">
+      </div>
+      <button @click="login" class="btn btn-primary">Login</button>
+    </div>
+
+    <div v-else>
+      <!-- Volume Control Page -->
+      <div class="flex-row mb-3 align-items-baseline">
+        <!-- <div class="goddess-pfp d-inline-flex p-2"></div> -->
+        <div class="d-inline-flex p-2">
+          <!-- <p class="h1">Goddess's control panel</p> -->
+          <p class="h1">Restim control panel</p>
+        </div>
+      </div>
+      <div v-for="device in devices" :key="device.id" class="my-3 container">
+        <h2 class="d-inline-block my-2" style="height: 60px;">{{ device.name }} stim: {{ Math.round(device.volume * 1000) }}</h2>
+        <div class="d-inline-block mx-2" v-if="device.volume * 100 > 49">
+          <img width="60" src="/static/cock-pulsing.gif" style="transform: scaleX(-1);" ></img>
+        </div>
+        <div class="d-inline-block mx-2" v-if="device.volume * 100 > 64">
+          <img width="40" src="/static/leak.gif"></img>
+        </div>
+        <div class="progress" role="progressbar" v-bind:aria-valuenow="parseInt(Math.round(device.volume * 100))"
+          aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+            v-bind:style=" { width: parseInt(Math.round(device.volume * 100))+'%' }" v-bind:class="{
+              'bg-info': (device.volume * 100) < 50, 
+              'bg-warning': (device.volume * 100) > 49,
+              'bg-danger': (device.volume * 100) > 64
+            }">
+          </div>
+        </div>
+        <div class="clearfix">&nbsp;</div>
+        <div class="row">
+          <div class="mx-2 col">
+            <div class="row" v-if="!device.paused">
+              <button @click="adjustVolume(device, 0.01)"
+                :disabled="device.volume > device.maxVolume - 0.01 || device.fetching"
+                class="btn btn-warning mx-1 col">+ 10</button>
+              <button @click="adjustVolume(device, 0.05)"
+                :disabled="device.volume > device.maxVolume - 0.05 || device.fetching"
+                class="btn btn-warning mx-1 col">+ 50</button>
+              <button @click="adjustVolume(device, 0.1)"
+                :disabled="device.volume > device.maxVolume - 0.1 || device.fetching" class="btn btn-warning mx-1 col">+
+                100</button>
+            </div>
+            <div class="row" v-if="!device.paused">
+              <button @click="adjustVolume(device, -0.01)" :disabled="device.volume < 0.01 || device.fetching"
+                class="btn btn-success mx-1 col">- 10</button>
+              <button @click="adjustVolume(device, -0.05)" :disabled="device.volume < 0.05 || device.fetching"
+                class="btn btn-success mx-1 col">- 50</button>
+              <button @click="adjustVolume(device, -0.1)" :disabled="device.volume < 0.1 || device.fetching"
+                class="btn btn-success mx-1 col">- 100</button>
+            </div>
+            <div class="row">
+              <fieldset>
+                <legend>Break</legend>
+              </fieldset>
+
+              <label for="spike_period_{{ device.id }}" class="form-label" v-if="!device.paused">
+                Length (seconds): {{ device.break }}
+              </label>
+              <input type="range" class="form-range" id="break_{{ device.id }}" min="1" step="1" max="30"
+                v-model="device.break" v-if="!device.paused">
+              <button v-if="!device.paused" @click="pauseVolume(device, device.break)"
+                :disabled="device.volume < 0.05 || device.fetching" class="btn btn-secondary mx-1 col">Pause {{
+                device.break }}</button>
+              <button v-if="!device.paused" @click="pauseVolume(device, 0)"
+                :disabled="device.volume < 0.05 || device.fetching" class="btn btn-danger mx-1 col">Stop</button>
+              <button v-if="device.paused" @click="resume(device)" :disabled="device.fetching"
+                class="btn btn-danger mx-1 col">Resume ({{ device.originalVolume * 1000 }})</button>
+            </div>
+          </div>
+          <div class="mx-2 col" v-if="!device.paused && device.maxPain > 0">
+            <div class="row" v-if="device.spike">
+              <fieldset class="callout callout-danger">
+                <legend class="danger">Slap ({{ (device.spike.intensity * 1000).toFixed(0) }} x {{  device.spike.size / 1000 }})
+                </legend>
+                <label for="spike_period_{{ device.id }}" class="form-label">
+                  Speed (seconds): {{ device.spike.period.toFixed(2) }}
+                </label>
+                <input type="range" class="form-range" id="spike_period_{{ device.id }}" min="0.3" step="0.1" max="2"
+                  v-model="device.spike.frequency">
+                <label for="spike_strength_{{ device.id }}" class="form-label">
+                  Intensity: {{ (device.spike.intensity * 1000) }}
+                </label>
+                <input type="range" class="form-range" id="spike_intensity_{{ device.id }}" min="0.1" step="0.05"
+                  :max="device.maxPain" v-model="device.spike.intensity">
+                <label for="spike_size_{{ device.id }}" class="form-label">
+                  Size (seconds): {{ (device.spike.size / 1000) }}
+                </label>
+                <input type="range" class="form-range" id="spike_size_{{ device.id }}" min="50" step="10" max="500"
+                  v-model="device.spike.size">
+                <label for="spike_repetitions_{{ device.id }}" class="form-label">
+                  Number (%): {{ device.spike.repetitions }}
+                </label>
+                <input type="range" class="form-range" id="spike_repetitions_{{ device.id }}" min="1" step="1" max="20"
+                  v-model="device.spike.repetitions">
+                <button @click="spikeVolume(device, device.spike)" :disabled="device.fetching" class="btn mx-1 col"
+                  v-bind:class="{
+                    'btn-success': (device.spike.intensity * device.spike.size) < 50, 
+                    'btn-warning': (device.spike.intensity * device.spike.size) > 49,
+                    'btn-danger': (device.spike.intensity * device.spike.size) > 100
+                  }">
+                  Slap {{ device.spike.intensity * device.spike.size * 10 }} x {{ device.spike.repetitions }}
+                </button>
+              </fieldset>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="static/script.js"></script>
+</body>
+
+</html>
