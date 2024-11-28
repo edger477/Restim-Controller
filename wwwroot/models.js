@@ -1,19 +1,41 @@
-class Device {
-  constructor({ id, soundCard = '', process = '', name, volume, maxVolume = 0, maxPain = 0 }) {
-    if (id === undefined || name === undefined || volume === undefined) {
-      throw new Error("id, name, and volume are required fields.");
+class Instance {
+  constructor({ id, name, volume, maxVolume = 0, newVolume = 0, minVolume = 0, maxSpike = 0, axes, isConnected, errorMessage }) {
+    if (id === undefined || name === undefined, maxVolume === undefined) {
+      throw new Error("id, name, and maxVolume are required fields.");
     }
 
     this.id = id;
-    this.soundCard = soundCard;
-    this.process = process;
     this.name = name;
     this.volume = volume;
+    this.newVolume = newVolume;
     this.maxVolume = maxVolume;
-    this.maxPain = maxPain;
+    this.minVolume = minVolume;
+    this.maxSpike = maxSpike;
+    this.axes = axes.map(a => {
+      a.newValue = a.value;
+      a.newFrequency = a.frequency;
+      return a;
+    });
     this.spike = new Spike();
     this.break = 5;
     this.paused = false;
+    this.isConnected = isConnected;
+    this.errorMessage = errorMessage;
+  }
+
+  updateFrom(otherInstance) {
+    this.volume = otherInstance.volume;
+    this.isConnected = otherInstance.isConnected;
+    this.errorMessage = otherInstance.errorMessage;
+    this.newVolume = otherInstance.newVolume;
+    this.axes = this.axes.map(axe => {
+      var other = otherInstance.axes.find(a => a.tCodeAxis == axe.tCodeAxis);
+
+      axe.value = other.value;
+      axe.frequency = other.frequency;
+
+      return axe;
+    });
   }
 
   // Additional methods can be added here if needed
@@ -62,4 +84,4 @@ class Spike {
   }
 }
 
-export { Device, Spike };
+export { Instance, Spike };
