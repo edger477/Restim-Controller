@@ -1,12 +1,13 @@
 import api from './api.js';
-import { Device, Spike } from './models.js';
+import { createApp, reactive } from 'vue';
+import { Instance, Spike } from './models.js';
 
-const app = Vue.createApp({
+const app = createApp({
   data() {
     return {
       authKey: document.cookie['authKey'] || '',
       isLoggedIn: false,
-      devices: []
+      instances: []
     };
   },
   methods: {
@@ -24,78 +25,97 @@ const app = Vue.createApp({
         alert('Login failed');
       }
     },
-    async fetchVolumes() {
+    async fetchInstances() {
       try {
-        if (this.fetchVolumes.fetching) return;
-        this.fetchVolumes.fetching = true;
-        const response = await api.getDevices();
-        var devices = response.devices.map(d => new Device(d));
+        if (this.fetchInstances.fetching) return;
+        this.fetchInstances.fetching = true;
+        const response = await api.getInstances();
+        var instances = response.instances.map(d => reactive(new Instance(d)));
 
-        this.devices = this.devices.filter((local) => this.devices.some((remote) => local.id === remote.id));
-        this.devices.forEach(device => device.volume = devices.find(d => d.id == device.id).volume);
+        this.instances = this.instances.filter((local) => instances.some((remote) => local.id === remote.id));
+        this.instances.forEach(instance => instance.updateFrom(instances.find(d => d.id == instance.id)));
 
-        var missing = devices.filter(
-          (local) => !this.devices.some((remote) => local.id === remote.id)
-        );
-        this.devices = this.devices.concat(missing);
+        var missing = instances.filter(
+          (local) => !this.instances.some((remote) => local.id === remote.id)
+        )
+          .map(d => reactive(new Instance(d)));
+        this.instances = this.instances.concat(missing);
 
 
-
-        // this.devices.forEach(device => {
-        //   const deviceData = response.devices.find(d => d.id === device.id);
-        //   if (deviceData) device.volume = deviceData.volume;
-        // });
-        this.fetchVolumes.fetching = false;
-        setTimeout(this.fetchVolumes, 100);
+        this.fetchInstances.fetching = false;
+        setTimeout(this.fetchInstances, 500);
       } catch (error) {
         console.error('Failed to fetch volumes', error);
       }
     },
-    async adjustVolume(device, amount) {
+    async updateAxis(instance, axis) {
       try {
-        device.fetching = true;
-        const response = await api.setVolume(device, device.volume + amount);
+        instance.fetching = true;
+        const response = await api.setAxis(instance, axis);
         console.log(response);
-        device.fetching = false;
-        this.fetchVolumes();
+        instance.fetching = false;
+        this.fetchInstances();
+      } catch (error) {
+        console.error('Failed to adjust axis', error);
+      }
+    },
+    async setVolume(instance, value) {
+      try {
+        instance.fetching = true;
+        const response = await api.setVolume(instance, value);
+        console.log(response);
+        instance.fetching = false;
+        this.fetchInstances();
       } catch (error) {
         console.error('Failed to adjust volume', error);
       }
     },
-    async spikeVolume(device, spike) {
+    async adjustVolume(instance, amount) {
       try {
-        device.fetching = true;
-        const response = await api.spike(device, spike);
+        instance.fetching = true;
+        const response = await api.setVolume(instance, instance.newVolume + amount);
+        console.log(response);
+        instance.fetching = false;
+        this.fetchInstances();
+      } catch (error) {
+        console.error('Failed to adjust volume', error);
+      }
+    },
+    async spikeVolume(instance, spike) {
+      try {
+        instance.fetching = true;
+        const response = await api.spike(instance, spike);
         console.log(response);
         setTimeout(function () {
-          device.fetching = false;
+          instance.fetching = false;
         }, (spike.size + spike.period * 1000) * spike.repeat + 1000);
       } catch (error) {
         console.error('Failed to spike volume', error);
       }
     },
-    async pauseVolume(device, duration) {
+    async pauseVolume(instance, duration) {
       try {
-        device.originalVolume = device.volume;
-        if(duration === 0) { device.paused = true; }
-        device.fetching = true;
-        const response = await api.pause(device, duration);
+        instance.originalVolume = instance.volume;
+        if (duration === 0) { instance.paused = true; }
+        const response = await api.pause(instance, duration);
         console.log(response);
+        await this.fetchInstances();
+        instance.fetching = true;
         setTimeout(function () {
-          device.fetching = false;
+          instance.fetching = false;
         }, duration * 1000 + 1000);
       } catch (error) {
         console.error('Failed to pause volume', error);
       }
     },
-    async resume(device) {
+    async resume(instance) {
       try {
-        device.paused = false;
-        device.fetching = true;
-        const response = await api.resume(device);
+        instance.paused = false;
+        instance.fetching = true;
+        const response = await api.resume(instance);
         console.log(response);
         setTimeout(function () {
-          device.fetching = false;
+          instance.fetching = false;
         }, 5000);
       } catch (error) {
         console.error('Failed to pause volume', error);
@@ -106,7 +126,7 @@ const app = Vue.createApp({
     },
     startVolumeRefresh() {
       // Start refreshing the volume every second
-      this.fetchVolumes(); // Initial fetch
+      this.fetchInstances(); // Initial fetch
     }
   },
   mounted() {
