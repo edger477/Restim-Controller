@@ -55,6 +55,11 @@
             <div class="d-inline-block mx-2" v-if="instance.volume * 100 > 64">
               <img width="40" src="/static/leak.gif"></img>
             </div>
+            <div v-if="instance.isConnected">
+              <label title="Is playing funscript">Is playing funcsript
+                <input type="checkbox" v-model="instance.isPlayingFunscript" />
+              </label>
+            </div>
           </div>
         </div>
         <div class="row my-2" v-if="instance.isConnected">
@@ -135,7 +140,7 @@
             </div>
           </fieldset>
         </div>
-        <div class="row" v-if="instance.isConnected">
+        <div class="row" v-if="instance.isConnected && !instance.isPlayingFunscript">
           <fieldset class="col border border-secondary">
             <legend>Axes</legend>
             <div class="row">

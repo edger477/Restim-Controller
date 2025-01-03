@@ -107,7 +107,6 @@ namespace RestimController.Controllers
                 if (axis != null)
                 {
                     axis.NewFrequency = request.NewFrequency;
-                    axis.ValueMax = request.ValueMax;
                     axis.Offset = request.Offset;
                     axis.Value = request.NewValue;
                 }
@@ -115,5 +114,4 @@ namespace RestimController.Controllers
             return Ok(new { });
         }
     }
-
 }
