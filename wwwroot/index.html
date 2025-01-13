@@ -162,6 +162,9 @@
                   <label for="axis_{{ axis.name }}" class="form-label">
                     Value: {{ (axis.value != axis.newValue) ? axis.value + ' => ' + axis.newValue : axis.value }}
                   </label>
+                  <label for="axis_{{ axis.name }}" class="form-label">
+                    &nbsp; | TCode Value: {{ ((axis.value - axis.valueMin) / (axis.valueMax - axis.valueMin)).toFixed(2) }}
+                  </label>
                   <input type="range" class="form-range mx-1" id="axis_{{ axis.name }}_value" :min="axis.valueMin"
                     :step="axis.step" :max="axis.valueMax" v-model="axis.newValue" @change="updateAxis(instance, axis)">
                 </template>
