@@ -39,21 +39,21 @@ namespace RestimController.Controllers
             return Ok(new { });
         }
 
-        [HttpPost("spike")]
-        public IActionResult Spike([FromBody] SpikeRequest request)
+        [HttpPost("{restimInstance}/spike")]
+        public IActionResult Spike(string restimInstance, [FromBody] SpikeRequest spike)
         {
-            // var device = _audioUtils.GetDevice(request.Id, request.DeviceName);
 
-            // Response.OnCompleted(async () =>
-            // {
-            //     for (int i = 0; i < request.RepeatCount; i++)
-            //     {
-            //         _audioUtils.SetVolume(request.Id, request.DeviceName, device.Volume + request.Amount);
-            //         await Task.Delay(TimeSpan.FromMilliseconds(request.MillisecondsOn));
-            //         _audioUtils.SetVolume(request.Id, request.DeviceName, device.Volume);
-            //         await Task.Delay(TimeSpan.FromMilliseconds(request.MillisecondsOff));
-            //     }
-            // });
+            var instance = _appSettings.RestimInstances.FirstOrDefault(i => i.Id == restimInstance);
+            if (instance != null)
+            {
+                instance.CurrentSpike = new RestimInstance.Spiking
+                {
+                    Intensity = spike.Amount,
+                    OnTime = spike.MillisecondsOn,
+                    OffTime = spike.MillisecondsOff,
+                    ToRepeat = spike.RepeatCount
+                };
+            }
             return Ok(new { });
         }
 
@@ -68,32 +68,10 @@ namespace RestimController.Controllers
                 if (duration > 0)
                 {
                     instance.NewDelayedVolume = oldVolume;
-                    instance.NewDelatedVolumeSetAt = DateTime.Now.AddSeconds(duration);
+                    instance.NewDelayedVolumeSetAt = DateTime.Now.AddSeconds(duration);
                 }
             }
             return Ok(new { });
-        }
-
-        [HttpPost("resume")]
-        public IActionResult Resume([FromBody] VolumeRequest request)
-        {
-            Response.OnCompleted(async () =>
-            {
-                await ResumeSignal(request);
-            });
-            return Ok();
-        }
-
-        private async Task ResumeSignal(VolumeRequest request)
-        {
-            // _audioUtils.SetVolume(request.Id, request.DeviceName, request.Volume * .7F);
-            // await Task.Delay(TimeSpan.FromSeconds(1));
-            // _audioUtils.SetVolume(request.Id, request.DeviceName, request.Volume * .8F);
-            // await Task.Delay(TimeSpan.FromSeconds(1));
-            // _audioUtils.SetVolume(request.Id, request.DeviceName, request.Volume * .9F);
-            // await Task.Delay(TimeSpan.FromSeconds(1));
-            // _audioUtils.SetVolume(request.Id, request.DeviceName, request.Volume);
-
         }
 
 

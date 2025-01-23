@@ -2,8 +2,7 @@ namespace RestimController.Models
 {
     public class SpikeRequest
     {
-        public uint Id { get; set; }
-        public string DeviceName { get; set; }
+        public string InstanceName { get; set; }
         public float Amount { get; set; }
 
         public int MillisecondsOn { get; set; }

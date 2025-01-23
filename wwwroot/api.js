@@ -86,12 +86,11 @@ const setAxis = async (instance, axis) => {
     }
 }
 
-const spike = async (device, spike) => {
+const spike = async (instance, spike) => {
     try {
-        const response = await apiClient.post('/volume/spike',
+        const response = await apiClient.post(`/restim/${instance.id}/spike`, 
             {
-                Id: device.id,
-                DeviceName: device.soundCard,
+                InstanceName: instance.id,
                 Amount: spike.intensity,
                 MillisecondsOn: spike.size,
                 MillisecondsOff: Math.round((spike.period * 1000) - spike.size),

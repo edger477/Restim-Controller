@@ -51,16 +51,46 @@ namespace RestimController.Services
                         while (!stoppingToken.IsCancellationRequested)
                         {
                             var elapsedTime = stopwatch.ElapsedMilliseconds / 1000d;
-
-                            if (restimInstance.NewDelayedVolume.HasValue && restimInstance.NewDelatedVolumeSetAt.HasValue && restimInstance.NewDelatedVolumeSetAt.Value < DateTime.Now)
+                            if (restimInstance.NewDelayedVolume.HasValue && restimInstance.NewDelayedVolumeSetAt.HasValue && restimInstance.NewDelayedVolumeSetAt.Value < DateTime.Now)
                             {
                                 restimInstance.NewVolume = restimInstance.NewDelayedVolume.Value;
 
                                 restimInstance.NewDelayedVolume = null;
-                                restimInstance.NewDelatedVolumeSetAt = null;
+                                restimInstance.NewDelayedVolumeSetAt = null;
                             }
 
-                            if (restimInstance.Volume > restimInstance.NewVolume)
+                            if (restimInstance.CurrentSpike != null)
+                            {
+                                var currentSpike = restimInstance.CurrentSpike;
+                                if (!currentSpike.NextOff.HasValue && !currentSpike.NextOn.HasValue && currentSpike.IsOn == false)
+                                {
+                                    currentSpike.NextOn = DateTime.Now;
+                                    currentSpike.NextOff = DateTime.Now.AddMilliseconds(currentSpike.OnTime);
+                                }
+
+                                if (currentSpike.NextOn <= DateTime.Now && currentSpike.NextOff > currentSpike.NextOn)
+                                {
+                                    currentSpike.NextOn = currentSpike.NextOn.Value.AddMilliseconds(currentSpike.OnTime + currentSpike.OffTime);
+                                    currentSpike.ToRepeat -= 1;
+                                    currentSpike.IsOn = true;
+                                    var packet = CreateAxisValuePacket(masterAxis, restimInstance.Volume + currentSpike.Intensity);
+                                    await stream.WriteAsync(packet, stoppingToken);
+
+                                }
+                                else if (currentSpike.NextOff <= DateTime.Now && currentSpike.NextOn > currentSpike.NextOff)
+                                {
+                                    currentSpike.NextOff = currentSpike.NextOff.Value.AddMilliseconds(currentSpike.OnTime + currentSpike.OffTime);
+                                    currentSpike.IsOn = false;
+                                    if (currentSpike.ToRepeat <= 0)
+                                    {
+                                        restimInstance.CurrentSpike = null;
+                                    }
+                                    var packet = CreateAxisValuePacket(masterAxis, restimInstance.Volume);
+                                    await stream.WriteAsync(packet, stoppingToken);
+                                }
+
+                            }
+                            else if (restimInstance.Volume > restimInstance.NewVolume)
                             {
                                 var packet = CreateAxisValuePacket(masterAxis, restimInstance.NewVolume);
                                 await stream.WriteAsync(packet, stoppingToken);
