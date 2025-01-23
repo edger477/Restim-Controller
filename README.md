@@ -1,6 +1,7 @@
 # restim-controller
  Webui to control volume of one or more instances of restim.
 
+To download - click "Releases" on the right and download release for your PC (if you have .net framework installed minimal works on windows, otherwise download the full one)
 
 Setup:
 Make a folder for each instance of restim you want to run (I run 2, "cock" and "prostate").
